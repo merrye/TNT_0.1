@@ -1,0 +1,33 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train_tnt.py",
+            // "program": "${workspaceFolder}/argoverse_loader_v2.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                // preprocess
+                // "--root", "dataset/",
+                // "--dest", "dataset",
+                // "-s"
+                
+                // vectorNet or TNT
+                "-d", "dataset/interm_data_small",
+                "-o", "run/tnt/",
+                "-a",
+                "-b", "128",
+                "-c",
+                "--lr", "0.001",
+                "-luf", "10",
+                "-ldr", "0.1"
+            ]
+        }
+    ]
+}
