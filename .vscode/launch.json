@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/train_tnt.py",
+            "program": "${workspaceFolder}/train_net.py",
             // "program": "${workspaceFolder}/argoverse_loader_v2.py",
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -19,8 +19,8 @@
                 // "-s"
                 
                 // vectorNet or TNT
-                "-d", "dataset/interm_data_small",
-                "-o", "run/tnt/",
+                "-d", "dataset/interm_data",
+                "-o", "run/net/",
                 "-a",
                 "-b", "128",
                 "-c",

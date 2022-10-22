@@ -21,15 +21,6 @@ class TrajEstimation(nn.Module):
         """
         
         super(TrajEstimation, self).__init__()
-        # self.in_channels = in_channels
-        # self.horizon = horizon
-        # self.hidden_dim = hidden_dim
-
-        # self.traj_pred = nn.Sequential(
-        #     MLP(in_channels + 2, hidden_dim, hidden_dim),
-        #     nn.Linear(hidden_dim, horizon * 2)
-        # )
-
         self.in_channels = in_channels
         self.horizon = horizon
         self.hidden_dim = hidden_dim
@@ -90,7 +81,6 @@ class TrajEstimation(nn.Module):
         obs_length = 20
         seq_length = obs_length + self.horizon
         obs_trajs = obs_trajs.permute(1, 0, 2)
-        # version 1:
         all_outputs = []
 
         for sample_idx in range(M):
@@ -107,11 +97,11 @@ class TrajEstimation(nn.Module):
                 current_agents = torch.cat((
                     obs_trajs,
                     outputs[obs_length:frame_idx]
-                )) # [frame_idx, batch_size, 2]
+                )).to(self.device) # [frame_idx, batch_size, 2]
 
-                ##################
+                #################
                 # RECURRENT MODULE
-                ##################
+                #################
 
                 # Input Embedding
                 temporal_input_embedded = self.dropout_input_temporal(self.relu(
@@ -134,14 +124,14 @@ class TrajEstimation(nn.Module):
                 distance_to_goal_to_cat = distance_to_goal.repeat(
                     frame_idx, 1, self.nhead//2)
 
-                # concat additional info BEFORE temporal transformer
+                # # concat additional info BEFORE temporal transformer
                 temporal_input_cat = torch.cat(
                     (temporal_input_embedded,
                      final_positions_pred_to_cat,
                      last_positions_to_cat,
                      distance_to_goal_to_cat,
                      current_time_step_to_cat,
-                     ), dim=2)
+                     ), dim=2).to(self.device)
                 # temporal transformer encoding
                 temporal_output = self.temporal_encoder(
                     temporal_input_cat)
@@ -170,22 +160,14 @@ class TrajEstimation(nn.Module):
                 # append to outputs
                 outputs[frame_idx] = outputs_current
 
-            all_outputs.append(outputs)
+            all_outputs.append(outputs.detach().cpu())
         # stack predictions
-        all_outputs = torch.stack(all_outputs)          # [M, seq_length, batch_size, 2]
-        all_outputs = all_outputs[:, obs_length:]       # [M, horizion, batch_size, 2]
-        all_outputs = all_outputs.permute(2, 0, 1, 3)   # [batch_size, M, horizion, 2]
+        all_outputs = torch.stack(all_outputs).to(self.device)          # [M, seq_length, batch_size, 2]
+        all_outputs = all_outputs[:, obs_length:]                       # [M, horizion, batch_size, 2]
+        all_outputs = all_outputs.permute(2, 0, 1, 3)                   # [batch_size, M, horizion, 2]
         all_outputs = all_outputs.contiguous().view(batch_size, M, -1)
-        return all_outputs
-        # if M > 1:
-        #     # target candidates
-        #     input = torch.cat([feat_in.repeat(1, M, 1), loc_in], dim=2)
-        # else:
-        #     # targt ground truth
-        #     input = torch.cat([feat_in, loc_in], dim=-1)
-
-
-        # return self.traj_pred(input)
+        all_outputs = all_outputs.reshape(batch_size, M, self.horizon * 2)
+        return all_outputs # [batch_size, M, horizon * 2]
 
     def loss(self, feat_in: torch.Tensor, loc_gt: torch.Tensor, traj_gt: torch.Tensor):
         """

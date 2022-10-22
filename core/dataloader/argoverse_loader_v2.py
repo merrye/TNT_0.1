@@ -239,7 +239,8 @@ class ArgoverseInDisk(Dataset):
 
     @property
     def processed_file_names(self):
-        return [file for file in os.listdir(self.processed_dir) if "data" in file and file.endswith(".pt")]
+        # return [file for file in os.listdir(self.processed_dir) if "data" in file and file.endswith(".pt")]
+        return ['data.pt']
 
     def download(self):
         pass
@@ -307,6 +308,7 @@ class ArgoverseInDisk(Dataset):
 
     def get(self, idx: int):
         data = torch.load(osp.join(self.processed_dir, self.processed_file_names[idx]))
+        data = data[0]
 
         feature_len = data.x.shape[1]
         index_to_pad = data.time_step_len[0].item()
@@ -319,6 +321,7 @@ class ArgoverseInDisk(Dataset):
 
         # pad candidate and candidate_gt
         num_cand_max = data.candidate_len_max[0].item()
+        print(len(data.candidate))
         data.candidate_mask = torch.cat([torch.ones((len(data.candidate), 1)),
                                          torch.zeros((num_cand_max - len(data.candidate), 1))])
         data.candidate = torch.cat([data.candidate, torch.zeros((num_cand_max - len(data.candidate), 2))])
@@ -387,34 +390,3 @@ class ArgoverseInDisk(Dataset):
         traj_fut = data_seq['gt_preds'].values[0][0]
         offset_fut = np.vstack([traj_fut[0, :] - traj_obs[-1, :2], traj_fut[1:, :] - traj_fut[:-1, :]])
         return offset_fut.reshape(-1).astype(np.float32)
-
-
-if __name__ == "__main__":
-
-    # for folder in os.listdir("./data/interm_data"):
-    INTERMEDIATE_DATA_DIR = "../../dataset/interm_data_small"
-
-    for folder in ["train", "val", "test"]:
-    # for folder in ["test"]:
-        dataset_input_path = os.path.join(INTERMEDIATE_DATA_DIR, f"{folder}_intermediate")
-
-        # dataset = Argoverse(dataset_input_path)
-        dataset = ArgoverseInMem(dataset_input_path).shuffle()
-        batch_iter = DataLoader(dataset, batch_size=16, num_workers=16, shuffle=True, pin_memory=False)
-        for k in range(1):
-            for i, data in enumerate(tqdm(batch_iter, total=len(batch_iter), bar_format="{l_bar}{r_bar}")):
-                pass
-
-            # print("{}".format(i))
-            # candit_len = data.candidate_len_max[0]
-            # print(candit_len)
-            # target_candite = data.candidate[candit_gt.squeeze(0).bool()]
-            # try:
-            #     # loss = torch.nn.functional.binary_cross_entropy(candit_gt, candit_gt)
-            #     target_candite = data.candidate[candit_gt.bool()]
-            # except:
-            #     print(torch.argmax())
-            #     print(candit_gt)
-            # # print("type: {}".format(type(candit_gt)))
-            # print("max: {}".format(candit_gt.max()))
-            # print("min: {}".format(candit_gt.min()))

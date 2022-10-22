@@ -12,6 +12,7 @@ from core.model.backbone.vectornet_v2 import VectorNetBackbone
 from core.model.layers.target_prediction import TargetPred
 # from core.model.layers.target_prediction_v2 import TargetPred
 from core.model.layers.traj_estimation import TrajEstimation
+from core.model.layers.motion_etimation import MotionEstimation
 from core.model.layers.scoring_and_selection import TrajScoreSelection, distance_metric
 from core.loss import TNTLoss
 
@@ -93,11 +94,11 @@ class NET(nn.Module):
             hidden_dim=motion_esti_hid,
             device=device
         )
-        # self.motion_estimator = MotionEstimation(
-        #     in_channels=global_graph_width,
-        #     horizon=horizon,
-        #     hidden_dim=motion_esti_hid
-        # )
+        self.motion_estimator = MotionEstimation(
+            in_channels=global_graph_width,
+            horizon=horizon,
+            hidden_dim=motion_esti_hid
+        )
         self.traj_score_layer = TrajScoreSelection(
             feat_channels=global_graph_width,
             horizon=horizon,
@@ -142,6 +143,7 @@ class NET(nn.Module):
         
         # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
         traj_with_gt = self.traj_estimator(target_feat, target_gt, obs_trajs)
+        # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
 
         # predict the trajectories for the M most-likely predicted target, and the score
         _, indices = target_prob.topk(self.m, dim=1)
@@ -160,6 +162,7 @@ class NET(nn.Module):
         target_pred_se, offset_pred_se = target_candidate[batch_idx, indices], offset[batch_idx, indices]
 
         trajs = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, obs_trajs) # [batch_size, m, horizon * 2]
+        # trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se) # [batch_size, m, horizon * 2]
 
         score = self.traj_score_layer(target_feat, trajs)
 

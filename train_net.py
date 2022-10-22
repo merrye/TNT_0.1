@@ -16,11 +16,11 @@ def train(gpu, args):
     :param args:
     :return:
     """
-    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate")).shuffle()
-    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate"))
+    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate_0")).shuffle()
+    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate_0"))
 
     # init output dir
-    time_stamp = datetime.now().strftime("%m-%d-%H-%M")
+    time_stamp = datetime.now().strftime("%m-%d-%H-%M-%S")
     output_dir = pjoin(args.output_dir, time_stamp)
     if not args.multi_gpu or (args.multi_gpu and gpu == 0):
         if os.path.exists(output_dir) and len(os.listdir(output_dir)) > 0:

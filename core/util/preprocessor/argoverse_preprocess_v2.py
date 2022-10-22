@@ -421,7 +421,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # args.root = "/home/jb/projects/Code/trajectory-prediction/TNT-Trajectory-Predition/dataset"
-    raw_dir = os.path.join(args.root, "raw_data")
+    raw_dir = os.path.join(args.root, "raw_data" if not args.small else "raw_data_small")
     interm_dir = os.path.join(args.dest, "interm_data" if not args.small else "interm_data_small")
 
     for split in ["train", "val", "test"]:

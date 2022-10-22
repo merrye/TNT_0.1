@@ -22,7 +22,7 @@ def train(gpu, args):
     eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate_0"))
 
     # init output dir
-    time_stamp = datetime.now().strftime("%m-%d-%H-%M-%S")
+    time_stamp = datetime.now().strftime("%m-%d-%H-%M")
     output_dir = pjoin(args.output_dir, time_stamp)
     if not args.multi_gpu or (args.multi_gpu and gpu == 0):
         if os.path.exists(output_dir) and len(os.listdir(output_dir)) > 0:

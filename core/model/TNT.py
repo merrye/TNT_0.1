@@ -89,7 +89,8 @@ class TNT(nn.Module):
         self.motion_estimator = MotionEstimation(
             in_channels=global_graph_width,
             horizon=horizon,
-            hidden_dim=motion_esti_hid
+            hidden_dim=motion_esti_hid,
+            device=device
         )
         self.traj_score_layer = TrajScoreSelection(
             feat_channels=global_graph_width,
@@ -131,7 +132,9 @@ class TNT(nn.Module):
 
         # predict the trajectory given the target gt
         target_gt = data.target_gt.view(-1, 1, 2)                       # [batch_size, 1, 2]
-        traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
+        obs_trajs = data.obs_trajs.view(batch_size, -1, 2)              # [batch_size, horizon, 2]
+        obs_trajs = obs_trajs.permute(1, 0, 2)
+        traj_with_gt = self.motion_estimator(target_feat, target_gt, obs_trajs)    # [batch_size, 1, horizon * 2]
 
         # predict the trajectories for the M most-likely predicted target, and the score
         _, indices = target_prob.topk(self.m, dim=1)
@@ -149,7 +152,7 @@ class TNT(nn.Module):
         batch_idx = torch.vstack([torch.arange(0, batch_size, device=self.device) for _ in range(self.m)]).T
         target_pred_se, offset_pred_se = target_candidate[batch_idx, indices], offset[batch_idx, indices]
 
-        trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se) # [batch_size, m, horizon * 2]
+        trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se, obs_trajs) # [batch_size, m, horizon * 2]
 
         score = self.traj_score_layer(target_feat, trajs)
 
