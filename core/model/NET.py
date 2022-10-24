@@ -94,11 +94,14 @@ class NET(nn.Module):
             hidden_dim=motion_esti_hid,
             device=device
         )
+
         self.motion_estimator = MotionEstimation(
             in_channels=global_graph_width,
             horizon=horizon,
-            hidden_dim=motion_esti_hid
+            hidden_dim=motion_esti_hid,
+            device=device
         )
+        
         self.traj_score_layer = TrajScoreSelection(
             feat_channels=global_graph_width,
             horizon=horizon,

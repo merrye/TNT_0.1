@@ -16,8 +16,8 @@ def train(gpu, args):
     :param args:
     :return:
     """
-    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate_0")).shuffle()
-    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate_0"))
+    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate_3")).shuffle()
+    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate_3"))
 
     # init output dir
     time_stamp = datetime.now().strftime("%m-%d-%H-%M-%S")

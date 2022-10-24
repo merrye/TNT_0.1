@@ -67,6 +67,11 @@ class TrajEstimation(nn.Module):
         else:
             self.output_layer = nn.Linear(hidden_dim, 2)
 
+        self.traj_pred = nn.Sequential(
+            MLP(in_channels + 2, hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim, horizon * 2)
+        )
+
     def forward(self, feat_in: torch.Tensor, loc_in: torch.Tensor, obs_trajs: torch.Tensor):
         """
         predict the trajectory according to the target location
