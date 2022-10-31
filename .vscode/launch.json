@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/train_net.py",
-            // "program": "${workspaceFolder}/argoverse_loader_v2.py",
+            // "program": "${workspaceFolder}/argoverse_preprocess_v2.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -19,7 +19,7 @@
                 // "-s"
                 
                 // vectorNet or TNT
-                "-d", "dataset/interm_data",
+                "-d", "dataset/interm_data_small",
                 "-o", "run/net/",
                 "-a",
                 "-b", "128",

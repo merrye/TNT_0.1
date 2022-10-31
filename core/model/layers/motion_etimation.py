@@ -23,54 +23,13 @@ class MotionEstimation(nn.Module):
         self.horizon = horizon
         self.hidden_dim = hidden_dim
         self.device = device
-        self.add_noise_traj = True
-        self.input_size = 2  # size of the input 2: (x,y)
-        self.noise_size = 16  # size of random noise vector
-        self.nhead = 8  # number of heads in multi-head attentions TF
-        self.d_hidden = 2048  # hidden dimension in the TF encoder layer
-        self.dropout_prob = 0  # the dropout probability value
-        self.n_layers_temporal = 1  # number of TransformerEncoderLayers
-        self.output_size = 2  # output size
-        self.extra_features = 4  # extra information to concat goals: time, last positions, predicted final positions, distance to predicted goals
-
-        # shape of output:  [batch_size, 1, horizon * 2]
-
-        # linear layer to map input to embedding
-        self.input_embedding_layer_temporal = nn.Linear(
-            self.input_size, self.hidden_dim // 2)
-
-        # ReLU and dropout init
-        self.relu = nn.ReLU()
-        self.dropout_input_temporal = nn.Dropout(self.dropout_prob)
-
-        # temporal encoder layer for temporal sequence
-        self.temporal_encoder_layer = nn.TransformerEncoderLayer(
-            d_model=self.hidden_dim // 2 + self.extra_features * self.nhead,
-            nhead=self.nhead,
-            dim_feedforward=self.d_hidden)
-
-        # temporal encoder for temporal sequence
-        self.temporal_encoder = nn.TransformerEncoder(
-            self.temporal_encoder_layer,
-            num_layers=self.n_layers_temporal)
-
-        # fusion layer
-        self.fusion_layer = nn.Linear(
-            hidden_dim // 2 + self.nhead * self.extra_features + \
-            self.extra_features * 2 - 1, hidden_dim)
-
-        # FC decoder
-        if self.add_noise_traj:
-            self.output_layer = nn.Linear(hidden_dim + self.noise_size, 2)
-        else:
-            self.output_layer = nn.Linear(hidden_dim, 2)
-
+        
         self.traj_pred = nn.Sequential(
             MLP(in_channels + 2, hidden_dim, hidden_dim),
             nn.Linear(hidden_dim, horizon * 2)
         )
 
-    def forward(self, feat_in: torch.Tensor, loc_in: torch.Tensor, obs_trajs: torch.Tensor):
+    def forward(self, feat_in: torch.Tensor, loc_in: torch.Tensor):
         """
         predict the trajectory according to the target location
         :param feat_in: encoded feature vector for the target agent, torch.Tensor, [batch_size, in_channels]

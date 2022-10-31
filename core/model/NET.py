@@ -12,7 +12,6 @@ from core.model.backbone.vectornet_v2 import VectorNetBackbone
 from core.model.layers.target_prediction import TargetPred
 # from core.model.layers.target_prediction_v2 import TargetPred
 from core.model.layers.traj_estimation import TrajEstimation
-from core.model.layers.motion_etimation import MotionEstimation
 from core.model.layers.scoring_and_selection import TrajScoreSelection, distance_metric
 from core.loss import TNTLoss
 
@@ -94,13 +93,6 @@ class NET(nn.Module):
             hidden_dim=motion_esti_hid,
             device=device
         )
-
-        self.motion_estimator = MotionEstimation(
-            in_channels=global_graph_width,
-            horizon=horizon,
-            hidden_dim=motion_esti_hid,
-            device=device
-        )
         
         self.traj_score_layer = TrajScoreSelection(
             feat_channels=global_graph_width,
@@ -142,10 +134,9 @@ class NET(nn.Module):
 
         # predict the trajectory given the target gt
         target_gt = data.target_gt.view(-1, 1, 2)                       # [batch_size, 1, 2]
-        obs_trajs = data.obs_trajs.view(batch_size, -1, 2)              # [batch_size, horizon, 2]
-        
+        agent_trajs = data.agent_trajs.view(batch_size, -1, 2).permute(1, 0, 2)
         # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
-        traj_with_gt = self.traj_estimator(target_feat, target_gt, obs_trajs)
+        traj_with_gt = self.traj_estimator(target_feat, target_gt, agent_trajs)
         # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
 
         # predict the trajectories for the M most-likely predicted target, and the score
@@ -164,7 +155,7 @@ class NET(nn.Module):
         batch_idx = torch.vstack([torch.arange(0, batch_size, device=self.device) for _ in range(self.m)]).T
         target_pred_se, offset_pred_se = target_candidate[batch_idx, indices], offset[batch_idx, indices]
 
-        trajs = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, obs_trajs) # [batch_size, m, horizon * 2]
+        trajs = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, agent_trajs) # [batch_size, m, horizon * 2]
         # trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se) # [batch_size, m, horizon * 2]
 
         score = self.traj_score_layer(target_feat, trajs)
@@ -198,10 +189,10 @@ class NET(nn.Module):
 
         # # DEBUG
         # gt = data.y.unsqueeze(1).view(batch_size, -1, 2).cumsum(axis=1)
-
-        obs_trajs = data.obs_trajs.view(batch_size, -1, 2)              # [batch_size, horizon, 2]
+          
+        agent_trajs = data.agent_trajs.view(batch_size, -1, 2).permute(1, 0, 2)     # [batch_size, horizon, 2]
         # trajectory estimation for the m predicted target location
-        traj_pred = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, obs_trajs)
+        traj_pred = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, agent_trajs)
 
         # score the predicted trajectory and select the top k trajectory
         score = self.traj_score_layer(target_feat, traj_pred)

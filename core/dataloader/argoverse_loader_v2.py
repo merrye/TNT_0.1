@@ -106,15 +106,13 @@ class ArgoverseInMem(InMemoryDataset):
             y = self._get_y(raw_data)
 
             # observed trajectory
-
-            obs_trajs = raw_data['feats'].values[0][:, :, :2][0]
-            has_obs = raw_data['has_obss'].values[0][0]
-            obs_trajs = obs_trajs[has_obs]
+            obs_trajs = raw_data['feats'].values[0][:, :, :2]
 
             graph_input = GraphData(
                 x=torch.from_numpy(x).float(),
                 y=torch.from_numpy(y).float(),
                 obs_trajs=torch.from_numpy(obs_trajs).float(),
+                agent_trajs=torch.from_numpy(obs_trajs[0]).float(),
                 cluster=torch.from_numpy(cluster).short(),
                 edge_index=torch.from_numpy(edge_index).long(),
                 identifier=torch.from_numpy(identifier).float(),    # the identify embedding of global graph completion

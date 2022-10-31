@@ -15,10 +15,10 @@ from apex import amp
 from apex.parallel import DistributedDataParallel
 
 from core.trainer.trainer import Trainer
-from core.model.NET import NET
+from core.model.NET_v2 import NET
 from core.optim_schedule import ScheduledOptim
 from core.util.viz_utils import show_pred_and_gt
-from core.loss import NETLoss
+from core.loss import NETLossV2 as NETLoss
 
 
 class NETTrainer(Trainer):
@@ -102,7 +102,6 @@ class NETTrainer(Trainer):
             with_aux=aux_loss,
             device=self.device
         )
-        
         self.criterion = NETLoss(
             self.lambda1, self.lambda2, self.lambda3,
             self.model.m, self.model.k, 0.01,

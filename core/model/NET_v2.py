@@ -11,14 +11,14 @@ from torch_geometric.data import DataLoader
 from core.model.backbone.vectornet_v2 import VectorNetBackbone
 from core.model.layers.target_prediction import TargetPred
 # from core.model.layers.target_prediction_v2 import TargetPred
-from core.model.layers.motion_etimation import MotionEstimation
+from core.model.layers.traj_estimation_v2 import TrajEstimation
 from core.model.layers.scoring_and_selection import TrajScoreSelection, distance_metric
 from core.loss import TNTLoss
 
 from core.dataloader.argoverse_loader_v2 import GraphData, ArgoverseInMem
 
 
-class TNT(nn.Module):
+class NET(nn.Module):
     def __init__(self,
                  in_channels=8,
                  horizon=30,
@@ -37,7 +37,7 @@ class TNT(nn.Module):
                  device=torch.device("cpu")
                  ):
         """
-        TNT algorithm for trajectory prediction
+        NET algorithm for trajectory prediction
         :param in_channels: int, the number of channels of the input node features
         :param horizon: int, the prediction horizon (prediction length)
         :param num_subgraph_layers: int, the number of subgraph layer
@@ -59,7 +59,7 @@ class TNT(nn.Module):
         :param device: the device for computation
         :param multi_gpu: the multi gpu setting
         """
-        super(TNT, self).__init__()
+        super(NET, self).__init__()
         self.horizon = horizon
         self.m = m
         self.k = k
@@ -86,12 +86,14 @@ class TNT(nn.Module):
             m=m,
             device=device
         )
-        self.motion_estimator = MotionEstimation(
+
+        self.traj_estimator = TrajEstimation(
             in_channels=global_graph_width,
             horizon=horizon,
             hidden_dim=motion_esti_hid,
             device=device
         )
+        
         self.traj_score_layer = TrajScoreSelection(
             feat_channels=global_graph_width,
             horizon=horizon,
@@ -132,7 +134,18 @@ class TNT(nn.Module):
 
         # predict the trajectory given the target gt
         target_gt = data.target_gt.view(-1, 1, 2)                       # [batch_size, 1, 2]
-        traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
+        agent_trajs = data.agent_trajs.view(batch_size, -1, 2).permute(1, 0, 2)
+        # observed_trajs = data.obs_trajs        
+        # prev = 0
+        # obs_trajs = []
+        # for curr in data.traj_len:
+        #     obs_trajs.append(observed_trajs[prev:curr+prev].permute(1, 0, 2)) # [seq_len, num_agents, 2]
+        #     prev += curr
+
+        # del prev, observed_trajs
+        # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
+        traj_with_gt = self.traj_estimator(target_feat, target_gt, agent_trajs)
+        # traj_with_gt = self.motion_estimator(target_feat, target_gt)    # [batch_size, 1, horizon * 2]
 
         # predict the trajectories for the M most-likely predicted target, and the score
         _, indices = target_prob.topk(self.m, dim=1)
@@ -150,7 +163,8 @@ class TNT(nn.Module):
         batch_idx = torch.vstack([torch.arange(0, batch_size, device=self.device) for _ in range(self.m)]).T
         target_pred_se, offset_pred_se = target_candidate[batch_idx, indices], offset[batch_idx, indices]
 
-        trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se) # [batch_size, m, horizon * 2]
+        trajs = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, agent_trajs) # [batch_size, m, horizon * 2]
+        # trajs = self.motion_estimator(target_feat, target_pred_se + offset_pred_se) # [batch_size, m, horizon * 2]
 
         score = self.traj_score_layer(target_feat, trajs)
 
@@ -184,8 +198,9 @@ class TNT(nn.Module):
         # # DEBUG
         # gt = data.y.unsqueeze(1).view(batch_size, -1, 2).cumsum(axis=1)
 
+        agent_trajs = data.agent_trajs.view(batch_size, -1, 2).permute(1, 0, 2)              # [batch_size, horizon, 2]
         # trajectory estimation for the m predicted target location
-        traj_pred = self.motion_estimator(target_feat, target_pred_se + offset_pred_se)
+        traj_pred = self.traj_estimator(target_feat, target_pred_se + offset_pred_se, agent_trajs)
 
         # score the predicted trajectory and select the top k trajectory
         score = self.traj_score_layer(target_feat, traj_pred)
@@ -241,46 +256,3 @@ class TNT(nn.Module):
             elif isinstance(module, nn.LayerNorm):
                 module.weight.data.fill_(1)
                 module.bias.data.zero_()
-
-
-if __name__ == "__main__":
-    batch_size = 32
-    DATA_DIR = "../../dataset/interm_tnt_n_s_0804_small"
-    # DATA_DIR = "../../dataset/interm_tnt_n_s_0804"
-    TRAIN_DIR = os.path.join(DATA_DIR, 'train_intermediate')
-    # TRAIN_DIR = os.path.join(DATA_DIR, 'val_intermediate')
-    # TRAIN_DIR = os.path.join(DATA_DIR, 'test_intermediate')
-
-    dataset = ArgoverseInMem(TRAIN_DIR)
-    data_iter = DataLoader(dataset, batch_size=batch_size, num_workers=1, pin_memory=True)
-
-    m, k = 50, 6
-    pred_len = 30
-
-    # device = torch.device("cuda:1")
-    device = torch.device("cpu")
-
-    model = TNT(in_channels=dataset.num_features,
-                horizon=pred_len,
-                m=m,
-                k=k,
-                with_aux=True,
-                device=device).to(device)
-
-    # train mode
-    model.train()
-    for i, data in enumerate(tqdm(data_iter)):
-        loss, _ = model.loss(data.to(device))
-        print("Training Pass! loss: {}".format(loss))
-
-        if i == 2:
-            break
-
-    # eval mode
-    model.eval()
-    for i, data in enumerate(tqdm(data_iter)):
-        pred = model(data.to(device))
-        print("Evaluation Pass! Shape of out: {}".format(pred.shape))
-
-        if i == 2:
-            break

@@ -8,8 +8,8 @@
 # python train_net.py --data_root dataset/interm_data --output_dir run/tnt/ --aux_loss --batch_size 8 --with_cuda --lr 0.0010 --warmup_epoch 30 --lr_update_freq 10 --lr_decay_rate 0.1
 # for multi-gpu training
 # nproc_per_node: set the number of gpu
-python3 -m torch.distributed.launch --nproc_per_node=2 train_net.py -d dataset/interm_data -o run/net/ \
-    -a -b 180 -c -m --lr 0.0012 -luf 10 -ldr 0.3 -w 40 -rm run/net/10-24-09-31-37/best_DistributedDataParallel.pth
+python3 -m torch.distributed.launch --nproc_per_node=2 train_net.py -d dataset/interm_data_small -o run/net/ \
+    -a -b 128 -c -m --lr 0.0012 -luf 10 -ldr 0.3 -w 40
 
 # when you need to choose the training GPU
 # CUDA_VISIBLE_DEVICES=1,0 pytshon -m torch.distributed.launch --nproc_per_node=1 train_net.py -d dataset/interm_data -o run/net/ -a -b 128 -c -m --lr 0.0012 -luf 10 -ldr 0.3

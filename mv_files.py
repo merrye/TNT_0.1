@@ -3,6 +3,10 @@ from os.path import join as pjoin
 
 root_dir = pjoin(os.getcwd(), "dataset/interm_data")
 
+for sub_dir in ['train', 'val', 'test_obs']:
+    p = pjoin(os.getcwd(), "dataset/raw_data", sub_dir)
+    print(f"len of %s is %d" % (p, len(os.listdir(p))))
+
 # input_path = pjoin(root_dir, "val_intermediate_8/raw")
 # # print(input_path)
 
@@ -34,16 +38,16 @@ root_dir = pjoin(os.getcwd(), "dataset/interm_data")
 
 
 
-sum = 0
-print("train: ")
-for i in range(10):
-    p_dir = pjoin(root_dir, "train_intermediate_%d" % i)
-    if not os.path.exists(p_dir): os.mkdir(p_dir)
-    p = pjoin(p_dir,"raw")
-    if not os.path.exists(p): os.mkdir(p)
-    sum += len(os.listdir(p))
-    print(i, len(os.listdir(p)))
-print(sum)
+# sum = 0
+# print("train: ")
+# for i in range(10):
+#     p_dir = pjoin(root_dir, "train_intermediate_%d" % i)
+#     if not os.path.exists(p_dir): os.mkdir(p_dir)
+#     p = pjoin(p_dir,"raw")
+#     if not os.path.exists(p): os.mkdir(p)
+#     sum += len(os.listdir(p))
+#     print(i, len(os.listdir(p)))
+# print(sum)
 # print("val: ")
 # for i in range(10):
 #     p_dir = pjoin(root_dir, "val_intermediate_%d" % i)

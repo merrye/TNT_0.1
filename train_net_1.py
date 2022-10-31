@@ -5,12 +5,10 @@ from datetime import datetime
 import json
 import argparse
 
-# from core.dataloader.argoverse_loader import Argoverse, GraphData, ArgoverseInMem
 from core.dataloader.argoverse_loader_v2 import ArgoverseInMem as ArgoverseInMemv2, GraphData
-from core.trainer.tnt_trainer import TNTTrainer
+from core.trainer.net_trainer_v2 import NETTrainer
 
 sys.path.append("core/dataloader")
-
 
 def train(gpu, args):
     """
@@ -18,11 +16,11 @@ def train(gpu, args):
     :param args:
     :return:
     """
-    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate_0")).shuffle()
-    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate_0"))
+    train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate")).shuffle()
+    eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate"))
 
     # init output dir
-    time_stamp = datetime.now().strftime("%m-%d-%H-%M")
+    time_stamp = datetime.now().strftime("%m-%d-%H-%M-%S")
     output_dir = pjoin(args.output_dir, time_stamp)
     if not args.multi_gpu or (args.multi_gpu and gpu == 0):
         if os.path.exists(output_dir) and len(os.listdir(output_dir)) > 0:
@@ -35,7 +33,7 @@ def train(gpu, args):
                 json.dump(vars(args), fp, indent=4, separators=(", ", ": "))
 
     # init trainer
-    trainer = TNTTrainer(
+    trainer = NETTrainer(
         trainset=train_set,
         evalset=eval_set,
         testset=eval_set,
@@ -112,7 +110,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--log_freq", type=int, default=2,
                         help="printing loss every n iter: setting n")
-    # parser.add_argument("--on_memory", type=bool, default=True, help="Loading on memory: true or false")
 
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
     parser.add_argument("-we", "--warmup_epoch", type=int, default=30,
