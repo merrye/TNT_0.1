@@ -5,7 +5,6 @@ import torch.nn.functional as F
 
 from core.model.layers.scoring_and_selection import distance_metric
 
-
 class VectorLoss(nn.Module):
     """
         The loss function for train vectornet, Loss = L_traj + alpha * L_node

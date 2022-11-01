@@ -38,7 +38,11 @@ class TrajEstimation(nn.Module):
 
         # shape of output:  [batch_size, 1, horizon * 2]
 
-        self.feat_layer = nn.Linear(self.hidden_dim, self.embedding_dim)
+        self.feat_layer = nn.Linear(self.hidden_dim, self.input_size)
+        # self.feat_layer = nn.Sequential(
+        #     MLP(hidden_dim, self.embedding_dim),
+        #     nn.Linear(self.embedding_dim, self.input_size)
+        # )
 
         # linear layer to map input to embedding
         self.input_embedding_layer_temporal = nn.Linear(
@@ -65,18 +69,19 @@ class TrajEstimation(nn.Module):
             self.extra_features * 2 - 1, hidden_dim)
 
         # FC decoder
-        if self.add_noise_traj:
-            # self.output_layer = nn.Sequential(
-            #     MLP(hidden_dim + self.noise_size, hidden_dim),
-            #     nn.Linear(hidden_dim, 2)
-            # )
-            self.output_layer = nn.Linear(hidden_dim + self.noise_size, 2)
-        else:
-            self.output_layer = nn.Sequential(
-                MLP(hidden_dim, hidden_dim),
-                nn.Linear(hidden_dim, 2)
-            )
-            # self.output_layer = nn.Linear(hidden_dim, 2)
+        # if self.add_noise_traj:
+        #     # self.output_layer = nn.Sequential(
+        #     #     MLP(hidden_dim + self.noise_size, hidden_dim),
+        #     #     nn.Linear(hidden_dim, 2)
+        #     # )
+        #     self.output_layer = nn.Linear(hidden_dim + self.noise_size, 2)
+        # else:
+        #     # self.output_layer = nn.Sequential(
+        #     #     MLP(hidden_dim, hidden_dim),
+        #     #     nn.Linear(hidden_dim, 2)
+        #     # )
+        #     self.output_layer = nn.Linear(hidden_dim, 2)
+        self.output_layer = nn.Linear(hidden_dim, 2)
 
     def forward(self, feat_in: torch.Tensor, loc_in: torch.Tensor, obs_trajs: torch.Tensor):
         """
@@ -92,12 +97,13 @@ class TrajEstimation(nn.Module):
         obs_length = 20
         seq_length = obs_length + self.horizon
         feat_in = feat_in.permute(1, 0, 2)
+        feat_in = self.feat_layer(feat_in)
         all_outputs = []
 
         for sample_idx in range(M):
             outputs = torch.zeros(seq_length, batch_size, 2).to(self.device)
             outputs[0:obs_length] = obs_trajs
-            # create noise vector to promote different trajectories
+            # create noise vector to promote diff   erent trajectories
             noise = torch.randn((1, self.noise_size)).to(self.device)
             goal_point = loc_in[:, sample_idx]
 
@@ -114,10 +120,12 @@ class TrajEstimation(nn.Module):
                 # RECURRENT MODULE
                 #################
 
+                feat_in_to_cat = feat_in.repeat(frame_idx, 1, 1)
                 # Input Embedding
                 temporal_input_embedded = self.dropout_input_temporal(self.relu(
                     self.input_embedding_layer_temporal(current_agents)))
 
+                # del feat_in_to_cat
                 # compute current positions and current time step
                 # and distance to goal
                 last_positions = current_agents[-1]
@@ -161,10 +169,10 @@ class TrajEstimation(nn.Module):
                 # fusion FC layer
                 fusion_feat = self.fusion_layer(fusion_feat)
 
-                if self.add_noise_traj:
-                    # Concatenate noise to fusion output
-                    noise_to_cat = noise.repeat(fusion_feat.shape[0], 1)
-                    fusion_feat = torch.cat((fusion_feat, noise_to_cat), dim=1)
+                # if self.add_noise_traj:
+                #     # Concatenate noise to fusion output
+                #     noise_to_cat = noise.repeat(fusion_feat.shape[0], 1)
+                #     fusion_feat = torch.cat((fusion_feat, noise_to_cat), dim=1)
 
                 # Output FC decoder
                 outputs_current = self.output_layer(fusion_feat)
@@ -176,7 +184,6 @@ class TrajEstimation(nn.Module):
         all_outputs = torch.stack(all_outputs).to(self.device)          # [M, seq_length, batch_size, 2]
         all_outputs = all_outputs[:, obs_length:]                       # [M, horizion, batch_size, 2]
         all_outputs = all_outputs.permute(2, 0, 1, 3)                   # [batch_size, M, horizion, 2]
-        all_outputs = all_outputs.contiguous().view(batch_size, M, -1)
         all_outputs = all_outputs.reshape(batch_size, M, self.horizon * 2)
         return all_outputs # [batch_size, M, horizon * 2]
 

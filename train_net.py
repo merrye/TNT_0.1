@@ -4,6 +4,7 @@ from os.path import join as pjoin
 from datetime import datetime
 import json
 import argparse
+import subprocess
 
 from core.dataloader.argoverse_loader_v2 import ArgoverseInMem as ArgoverseInMemv2, GraphData
 from core.trainer.net_trainer import NETTrainer
@@ -16,6 +17,7 @@ def train(gpu, args):
     :param args:
     :return:
     """
+
     if 'small' in args.data_root:
         train_set = ArgoverseInMemv2(pjoin(args.data_root, "train_intermediate")).shuffle()
         eval_set = ArgoverseInMemv2(pjoin(args.data_root, "val_intermediate"))
@@ -26,6 +28,9 @@ def train(gpu, args):
     # init output dir
     time_stamp = datetime.now().strftime("%m-%d-%H-%M-%S")
     output_dir = pjoin(args.output_dir, time_stamp)
+    # with open(os.path.join(output_dir, 'model.txt'), 'w') as f:
+    #     f.write(str(trainer.model))
+    
     if not args.multi_gpu or (args.multi_gpu and gpu == 0):
         if os.path.exists(output_dir) and len(os.listdir(output_dir)) > 0:
             raise Exception("The output folder does exists and is not empty! Check the folder.")
@@ -36,6 +41,8 @@ def train(gpu, args):
             with open(pjoin(output_dir, 'conf.json'), 'w') as fp:
                 json.dump(vars(args), fp, indent=4, separators=(", ", ": "))
 
+    # write traj_estimation.py
+    subprocess.check_output(f'cp {pjoin(os.getcwd(), "core/model/layers/traj_estimation.py")} {pjoin(output_dir, "traj_estimation.py")}', shell=True, encoding='utf-8') 
     # init trainer
     trainer = NETTrainer(
         trainset=train_set,
